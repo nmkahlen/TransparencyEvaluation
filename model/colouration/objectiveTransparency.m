@@ -1,8 +1,10 @@
 clc ; clear variables; %close all;
+close all
+
 dbstop if error
 
 %% Specify the directory with the sofafiles and the reference filename here
-directory = '/Users/meyern2/Documents/Projects/2023_headphones/yamt/sofaFiles/long/'; 
+directory = '/Users/meyern2/Documents/Projects/2023_headphones/yamt/sofaFiles/long/';
 filename_reference =  'open_ears.sofa';
 
 savePlots = 1;
@@ -11,7 +13,10 @@ plotIRFlag = 0;
 %% find sofa files in the directory
 s = dir(strcat(directory,'/*.sofa')); % s is structure array
 
+s = s([14, 5, 7, 10, 11]); % select some to plot
+
 file_list = {s.name}'; % convert the name field into cell array of strings.
+
 num_meas = length(s); % Number of datasets
 
 %%
@@ -46,10 +51,6 @@ end
 rsP = repmat(rsP,1,length(hrir_trunc(1,1,1,:))); % duplicate to length of tsp
 filename = {s.name}';
 
-%load('testDirections.mat');
-
-%filename2 = {'K702mod','HD650','K702','mysphere_closed','mysphere_open','questMS_closed','questMS_open','openEar','openEarControl','quest2'}';
-
 for i = 1:num_meas
     filename2{i} = filename{i}(1:end-5);
 end
@@ -63,113 +64,103 @@ nfft = length(rsP(:,1,1)); % fft window size same as signal length
 f.fs = fs;f.nfft = nfft;f.minFreq = freqRange(1); f.maxFreq = freqRange(2);
 datasetNormalisation = 0; % blank vector for using iterative dataset normalisation. if an int, then that fixes the dataset normalisation in dB. Thus for no normalisation, set to 0.
 
+%for i = 1:length(tsP(1,:,1))
+%    CLL_difference(i,:) = cll_difference(tsP(:,i,:),rsP(:,i,:),fs);
+%end
+
+
 for i = 1:length(tsP(1,:,1))
-    CLL_difference(i,:) = cll_difference(tsP(:,i,:),rsP(:,i,:),fs);
+    [transparency(i, :), centerFrequencies] = ...
+        transparencyBands(tsP(:,i,:),rsP(:,i,:), lsAziEle(mod(i-1, length(lsAziEle))+1), fs);
 end
 
-% get single values of spectral difference for all stimuli
-CavgSpecDiffS = mean(abs(CLL_difference), 2);
+% X = fft(tsP);
+% Xref = fft(rsP);
+% T = abs(X) ./ abs(Xref);
+% 
+% nfft = size(X, 1);
+% for i = 1:size(X, 2)/length(lsAziEle)
+%         figure
+%         %semilogx(db(X(1:nfft/2+1, (i-1)*length(lsAziEle)+1:i*(length(lsAziEle)), 1)))
+%         %ylim([-30 10])
+%         
+%         %semilogx(db(Xref(1:nfft/2+1, (i-1)*length(lsAziEle)+1:i*(length(lsAziEle)), 1)))
+%         %ylim([-30 10])
+%         semilogx(db(T(1:nfft/2+1, (i-1)*length(lsAziEle)+1:i*(length(lsAziEle)), 1)))
+% end
 
-for j = 1:num_meas
-    meanCLL(j, 1) = mean(CavgSpecDiffS(((j-1)*num_points)+1:((j-1)*num_points)+num_points));
-end
+%for j = 1:num_meas
+%    meanCLL(j, 1) = mean(CavgSpecDiffS(((j-1)*num_points)+1:((j-1)*num_points)+num_points));
+%end
 
 % based on ordering in filename
 %meanCLL_conditionsC2to6 = [meanCLL(1) meanCLL(2) meanCLL(3) meanCLL(4) meanCLL(5) meanCLL(6)];
 
+plotSpectralDifferenceHAMap(transparency, ...
+    lsAziEle,filename2,savePlots, centerFrequencies);
 
-% plot values
-plotSpectralDifferenceHAMap(CavgSpecDiffS,lsAziEle,filename2,savePlots);
 
-% no map projection
-%plotSpectralDifference(CavgSpecDiffS,lsAziEle,filename2,savePlots);
 
 %% Plot perceptual spectral difference values
-function plotSpectralDifference(spectralDifference,testDirections,filename2,savePlots)
+function plotSpectralDifferenceHAMap(spectralDifference,testDirections,filename2,savePlots, centerFrequencies)
 % calculate max and minimum values
-maxValue = 7; %max(spectralDifference);
-minValue = min(spectralDifference);
+maxValue = 4;
+minValue = -14;
 
-for i = 1:length(spectralDifference)/length(testDirections)
-    h = figure;
-    % plot values on spherical map
-    heatmap_plot(testDirections(:,1),testDirections(:,2),spectralDifference((i-1)*length(testDirections)+1:i*(length(testDirections))));
-    
-    averageSDvalue = mean(spectralDifference((i-1)*length(testDirections)+1:i*(length(testDirections))));
-    title(strcat('Mean CLL=',num2str(averageSDvalue),' dB'));
-    c2 = colorbar; c2.Label.String = 'CLL (dB)';
-    caxis([minValue,maxValue]);
-    xlim([-180 180]); % as this data is only in a hemisphere, constrain axis limits
-    set(gca, 'FontSize',14);
-    
-    title(filename2(i))
-
-    if savePlots == 1
-        saveFig(h,strcat('Figures/coloration_',string(filename2(i))),2.5);
-    end
-end
-
-end
-
-%% Plot perceptual spectral difference values
-function plotSpectralDifferenceHAMap(spectralDifference,testDirections,filename2,savePlots)
-% calculate max and minimum values
-maxValue = 7; %max(spectralDifference);
-minValue = min(spectralDifference);
+numFrequencies = length(centerFrequencies);
 
 % figure('position',[100,100,800 800]);
 for i = 1:length(spectralDifference)/length(testDirections)
     %     subplot(5,2,i)
     h = figure;
-    % plot values on spherical map
-    
-    map = true; % choose between equiangular or hammer aitof map projection
-    
-    heatmap_plot_ha_map(testDirections(:,1), ...
-        testDirections(:,2), ...
-        spectralDifference((i-1)*length(testDirections)+1:i*(length(testDirections))), ...
-        map);
 
-    %    meanSD = mean(spectralDifference((i-1)*length(testDirections)+1:i*(length(testDirections))));
-    %    title(strcat(filename(i),'. Mean PTD=',num2str(meanSD),' sones'));
-    %    title(strcat(filename(i),'. Mean CLL=',num2str(meanSD),' dB'));
-    %    title(strcat(filename(i),'. Mean SD=',num2str(meanSD),' dB'));
-    
-    % c2 = colorbar; c2.Label.String = 'PTD (sones)';
-    c2 = colorbar; c2.Label.String = 'CLL (dB)';
-    % c2 = colorbar; c2.Label.String = 'SD (dB)';
+    for idxFreq = 1:numFrequencies
+        % plot values
 
+        %subplot(numFrequencies/2, 2, idxFreq)
 
-    caxis([minValue, maxValue]);
-    
-    c2.Ticks = 0:maxValue;
-    c2.TickLabels = [num2str((0:maxValue)'); ''];
- 
-    set(gca, 'FontSize',14);
+        % plot values on spherical map
+        map = true; % choose between equiangular or hammer aitof map projection
 
-        c2.Location = 'southoutside'
+        heatmap_plot_ha_map(testDirections(:,1), ...
+            testDirections(:,2), ...
+            spectralDifference((i-1)*length(testDirections)+1:i*(length(testDirections)), idxFreq), ...
+            map);
 
+        %    meanSD = mean(spectralDifference((i-1)*length(testDirections)+1:i*(length(testDirections))));
+        %    title(strcat(filename(i),'. Mean PTD=',num2str(meanSD),' sones'));
+        %    title(strcat(filename(i),'. Mean CLL=',num2str(meanSD),' dB'));
+        %    title(strcat(filename(i),'. Mean SD=',num2str(meanSD),' dB'));
 
-    %title(filename2(i))
-    
-    if savePlots == 1
-        if ~map
-            xlim([-180 180]);
-            %saveFig(h,strcat('Figures/hpTransparency_',string(filename2(i))),2.5);
-        else
-            %c2.Position = [0.8518 0.2990 0.0214 0.4014];
-        
-            %printScaled(14, 10, ['Figures/coloration_' (filename2{i}), '_map'], 'png')
-            width = 14
-            height = 10
-            name = ['Figures/coloration_' (filename2{i}), '_map']
-            set(gcf, 'paperunits', 'centimeters', 'papersize', [width height],...
-                'paperposition', [0, 0, 14, 10]);
-            print([name, '.png'], '-dpng')
-            %saveas(h,strcat('Figures/hpTransparency_',string(filename2(i))));
+        % c2 = colorbar; c2.Label.String = 'PTD (sones)';
+        c2 = colorbar; c2.Label.String = 'Transparency (dB)';
+        % c2 = colorbar; c2.Label.String = 'SD (dB)';
 
+        caxis([minValue, maxValue]);
+        colormap([gray(-minValue+1); [1, .9, .9]; [1, .7, .7]; [1, .5, .5]])
+        %colormap("gray")
+        c2.Ticks = (minValue:maxValue) + 0.5;
+        c2.TickLabels = [num2str((minValue:maxValue)'); ''];
+
+        set(gca, 'FontSize',14);
+
+        c2.Visible = false;
+
+        %title(centerFrequencies(idxFreq))
+
+        if savePlots == 1
+            if ~map
+                xlim([-180 180]);
+                %saveFig(h,strcat('Figures/hpTransparency_',string(filename2(i))),2.5);
+            else
+                c2.Position = [0.8518 0.2990 0.0214 0.4014];
+                printScaled(14, 10, ['Figures/hpTransparency_' (filename2{i}), '_map_' num2str(centerFrequencies(idxFreq))], 'png')
+                %saveas(h,strcat('Figures/hpTransparency_',string(filename2(i))));
+
+            end
         end
-    end 
+    end
+
 end
 
 end
@@ -182,9 +173,9 @@ function heatmap_plot_ha_map(az,el,psd, hammerAitof)
 if ~hammerAitof
     xlin = linspace(min(az),max(az),180*2);
     ylin = linspace(min(el),max(el),90*2);
-    
+
     [X,Y] = meshgrid(xlin,ylin);
-    
+
     Z = griddata(az, el, psd, X, Y, 'cubic');
     figure
     surf(X,Y,Z, 'EdgeColor','none')
@@ -194,20 +185,20 @@ if ~hammerAitof
     colormap(flipud(parula(5))); set(gcf, 'Color', 'w');
     axis tight; box on; pbaspect([2 1 1]);
 else
-    
+
     % interpolate to a dense equiangular grid first
     % alternative would be: dublicate 180 points to -180
     azDense = -180:180;
     elDense =  -90:90;
     [Azdense, Eldense] = meshgrid(azDense, elDense);
     Psd = griddata(az, el, psd, Azdense, Eldense, 'cubic');
-    
+
     % now apply projection by mapping the dense equiangular grid
     % with hammer aithof projection into a range -1, 1
     [xq, yq] = meshgrid (-1:.005:1, -1:.005:1);
     xyProjected = hap (mod (Azdense(:) / 180 * pi + pi, 2 * pi) - pi, Eldense(:) / 180 * pi);
     Z = griddata(xyProjected(:, 1), xyProjected(:, 2), Psd(:), xq, yq);
-  
+
     pcolor(xq,yq, Z)
     shading flat
     axis equal
@@ -216,23 +207,23 @@ else
     axis off
     cbh = colorbar
     colormap(flipud(parula(15))); set(gcf, 'Color', 'w');
-    
+
     % Loudspeaker Positions
     xyLs =hap (mod (az / 180 * pi + pi, 2 * pi) - pi, el / 180 * pi);
     scatter(xyLs(:, 1), xyLs(:, 2), 20, 'linewidth', 0.3, ...
         'markerEdgeColor', [1 1 1]*0.5)
-    
-    azListeningTest = [0, 45, 90, 180, 0]';
-    elListeningTest = [0, 30, 0, 0, 90]';
-    xyListeningTest =hap (mod (azListeningTest / 180 * pi + pi, 2 * pi) ...
-        - pi, elListeningTest / 180 * pi);
-    scatter(xyListeningTest(:, 1), xyListeningTest(:, 2), 20, 'x', ...
-        'linewidth', 1, ...
-        'markerEdgeColor', [1 1 1]*0)
-    
-    
+
+    %azListeningTest = [0, 45, 90, 180, 0]';
+    %elListeningTest = [0, 30, 0, 0, 90]';
+    %xyListeningTest =hap (mod (azListeningTest / 180 * pi + pi, 2 * pi) ...
+    %    - pi, elListeningTest / 180 * pi);
+    %scatter(xyListeningTest(:, 1), xyListeningTest(:, 2), 20, 'x', ...
+    %    'linewidth', 1, ...
+    %    'markerEdgeColor', [1 1 1]*0)
+
+
     % Grid lines and azi, ele ticks
-    createMapGrid() 
+    createMapGrid()
 end
 end
 
@@ -325,7 +316,7 @@ end
 
 function [hrir_trunc, lsAziEle, fs] = ir_load_truncate(filename, plotIRFlag)
 
-data = SOFAload(filename); 
+data = SOFAload(filename);
 
 fs = data.Data.SamplingRate;
 hrirs = permute(data.Data.IR, [3 1 2]); % 4096 x 47 x 2
@@ -333,7 +324,7 @@ lsAziEle = data.SourcePosition(:, 1:2) ;
 
 onsetThreshold = 10^(-70/20);
 thresholdToOnsetDelay_samp = 16;
-irLength_samp = 512;
+irLength_samp = 256;
 
 fade_windows = { @(N)(hanning(N).^2) @(N)(hanning(N).^2) };
 fadein_duration_samp = 8;

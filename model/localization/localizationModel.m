@@ -1,9 +1,16 @@
+
+clear
+close all 
+clc
+
 %% FIND ALL SOFA FILES IN FOLDER
-SOFAfolderName = '../../measurement_data';
+SOFAfolderName = '/Users/meyern2/Documents/Projects/2023_headphones/yamt/sofaFiles/'; 
 mySOFAfiles = dir(SOFAfolderName+"/*.sofa");
 
+mySOFAfiles = mySOFAfiles([5, 7, 9, 12, 10, 14]);
+
 %% LOAD TEMPLATE
-sofaFileName_template = '0_open_ear.sofa';
+sofaFileName_template = 'open_ears.sofa';
 SOFAfile_template=fullfile(SOFAfolderName, sofaFileName_template);
 ObjFull_template=SOFAload(SOFAfile_template);
 
@@ -25,8 +32,10 @@ parameters.sOpt_OE = 0.35;
 %% EVALUATING QUADRANT ERRORS
 % EVALUATING OPTIMISED PARAMETERS
 for i = 1:length(mySOFAfiles)
-    device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
+    devname = mySOFAfiles(i).name;
     sofaFileName_target = mySOFAfiles(i).name;
+
+    device_id{i} = replace(devname(1:end-5), '_', ' ');
 
     SOFAfile_target=fullfile(SOFAfolderName, sofaFileName_target);
     ObjFull_target=SOFAload(SOFAfile_target);
@@ -40,15 +49,15 @@ for i = 1:length(mySOFAfiles)
     [predicted.QE_opt(i),~,~] = baumgartner2014_pmv2ppp(p,tang,rang); 
 end
 figure;
-plot(lisTestResults.subjQE,'-o','LineWidth',2,'MarkerSize',10); hold on;
+%plot(lisTestResults.subjQE,'-o','LineWidth',2,'MarkerSize',10); hold on;
 plot(predicted.QE_opt,'--d','LineWidth',2,'MarkerSize',10); hold on;
-[raux,paux] = corrcoef(predicted.QE_opt,lisTestResults.subjQE);
-corr.r_qe_opt = raux(1,2);
-corr.p_qe_opt = paux(1,2);
+%[raux,paux] = corrcoef(predicted.QE_opt,lisTestResults.subjQE);
+%corr.r_qe_opt = raux(1,2);
+%corr.p_qe_opt = paux(1,2);
 
 % EVALUATING DEFAULT PARAMETERS
 for i = 1:length(mySOFAfiles)
-    device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
+%    device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
     sofaFileName_target = mySOFAfiles(i).name;
 
     SOFAfile_target=fullfile(SOFAfolderName, sofaFileName_target);
@@ -65,16 +74,20 @@ end
 
 plot(predicted.QE_mod,'-.sk','LineWidth',2,'MarkerSize',10); hold on;
 
-[raux,paux] = corrcoef(predicted.QE_mod,lisTestResults.subjQE);
-corr.r_qe_mod = raux(1,2);
-corr.p_qe_mod = paux(1,2);
+%[raux,paux] = corrcoef(predicted.QE_mod,lisTestResults.subjQE);
+%corr.r_qe_mod = raux(1,2);
+%corr.p_qe_mod = paux(1,2);
+legend("Predicted - baumgartner2014 optimised","Predicted - baumgartner2014 modified",'Location','northwest')
 
-legend("Subjective test", "Predicted - baumgartner2014 optimised","Predicted - baumgartner2014 modified",'Location','northwest')
+%legend("Subjective test", "Predicted - baumgartner2014 optimised","Predicted - baumgartner2014 modified",'Location','northwest')
 title("Quadrant error in the median plane")
 xlim([0 length(cond_dict)+1])
 ylim([0 60])
 xticks([1:length(cond_dict)])
-xticklabels([cond_dict])
+%xticklabels([device_id])
+
+xticklabels([device_id])
+
 ylabel("Quadrant error (QE%)")
 grid on;
 
@@ -82,7 +95,7 @@ grid on;
 %% EVALUATING FRONT-BACK CONFUSIONS
 % EVALUATING OPTIMISED PARAMETERS
 for i = 1:length(mySOFAfiles)
-    device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
+%    device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
     sofaFileName_target = mySOFAfiles(i).name;
 
     SOFAfile_target=fullfile(SOFAfolderName, sofaFileName_target);
@@ -106,16 +119,16 @@ p_conf = (p_conf_f2b + p_conf_b2f) / 2;
 predicted.FB_opt = mean(p_conf');
 
 figure;
-plot(lisTestResults.subjFB/100,'-o','LineWidth',2,'MarkerSize',10);hold on;
+%plot(lisTestResults.subjFB/100,'-o','LineWidth',2,'MarkerSize',10);hold on;
 plot(predicted.FB_opt,'--d','LineWidth',2,'MarkerSize',10); hold on;
 
-[raux,paux] = corrcoef(predicted.FB_opt,lisTestResults.subjFB);
-corr.r_fb_opt = raux(1,2);
-corr.p_fb_opt = paux(1,2);
+%[raux,paux] = corrcoef(predicted.FB_opt,lisTestResults.subjFB);
+%corr.r_fb_opt = raux(1,2);
+%corr.p_fb_opt = paux(1,2);
 
 % EVALUATING DEFAULT PARAMETERS
 for i = 1:length(mySOFAfiles)
-    device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
+%    device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
 
     sofaFileName_target = mySOFAfiles(i).name;
 
@@ -143,26 +156,34 @@ predicted.FB_mod = mean(p_conf');
 plot(predicted.FB_mod,'-.sk','LineWidth',2,'MarkerSize',10); hold on;
 clear p_conf p_conf_b2f p_conf_f2b
 
-[raux,paux] = corrcoef(predicted.FB_mod,lisTestResults.subjFB);
-corr.r_fb_mod = raux(1,2);
-corr.p_fb_mod = paux(1,2);
+%[raux,paux] = corrcoef(predicted.FB_mod,lisTestResults.subjFB);
+%corr.r_fb_mod = raux(1,2);
+%corr.p_fb_mod = paux(1,2);
+%legend("Subjective test", "Predicted - baumgartner2014 optimised","Predicted - baumgartner2014 modified",'Location','northwest')
 
-legend("Subjective test", "Predicted - baumgartner2014 optimised","Predicted - baumgartner2014 modified",'Location','northwest')
+legend( "Predicted - baumgartner2014 optimised","Predicted - baumgartner2014 modified",'Location','northwest')
 xlim([0 length(cond_dict)+1])
 ylim([0 0.5])
 xticks([1:length(cond_dict)])
-xticklabels(cond_dict)
+%xticklabels(cond_dict)
+
+xticklabels(device_id)
+
 yticks([0:0.1:0.5])
 yticklabels([0:10:50])
-title("Front-back confusion in the horizontal plane")
+%title("Front-back confusion in the horizontal plane")
 ylabel("Front-back confusions (FB%)")
 grid on;
+
+set(gca, 'FontSize', 14)
+
+printScaled(14, 10, 'FB', 'pdf')
 
 
 %% EVALUATING FRONT POLAR ERRORS
 % EVALUATING OPTIMISED PARAMETERS
 for i = 1:length(mySOFAfiles)
-    device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
+    %device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
     sofaFileName_target = mySOFAfiles(i).name;
 
     SOFAfile_target=fullfile(SOFAfolderName, sofaFileName_target);
@@ -174,18 +195,19 @@ for i = 1:length(mySOFAfiles)
     p_subset = p(:,2:7);
     [~,pe_subset_OE(i),~] = baumgartner2014_pmv2ppp(p_subset,tang_subset,rang); 
 end
+
 figure;
-plot(lisTestResults.subjFrontPE,'-o','LineWidth',2,'MarkerSize',10);hold on;
+%plot(lisTestResults.subjFrontPE,'-o','LineWidth',2,'MarkerSize',10);hold on;
 plot(pe_subset_OE,'--d','LineWidth',2,'MarkerSize',10); hold on;
 
-[raux,paux] = corrcoef(pe_subset_OE,lisTestResults.subjFrontPE);
-corr.r_pe_opt = raux(1,2);
-corr.p_pe_opt = paux(1,2);
+%[raux,paux] = corrcoef(pe_subset_OE,lisTestResults.subjFrontPE);
+%corr.r_pe_opt = raux(1,2);
+%corr.p_pe_opt = paux(1,2);
 predicted.FrontPE_opt = pe_subset_OE;
 
 % EVALUATING DEFAULT PARAMETERS
 for i = 1:length(mySOFAfiles)
-    device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
+%    device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
     sofaFileName_target = mySOFAfiles(i).name;
 
     SOFAfile_target=fullfile(SOFAfolderName, sofaFileName_target);
@@ -200,18 +222,19 @@ end
 
 plot(pe_subset_OE,'-.sk','LineWidth',2,'MarkerSize',10); hold on;
 
-[raux,paux] = corrcoef(pe_subset_OE,lisTestResults.subjFrontPE);
-corr.r_pe_mod = raux(1,2);
-corr.p_pe_mod = paux(1,2);
+%[raux,paux] = corrcoef(pe_subset_OE,lisTestResults.subjFrontPE);
+%corr.r_pe_mod = raux(1,2);
+%corr.p_pe_mod = paux(1,2);
 
 predicted.FrontPE_mod = pe_subset_OE;
 clear pe_subset_OE
+legend( "Predicted - baumgartner2014 optimised","Predicted - baumgartner2014 modified",'Location','northwest')
 
-legend("Subjective test", "Predicted - baumgartner2014 optimised","Predicted - baumgartner2014 modified",'Location','northwest')
+%legend("Subjective test", "Predicted - baumgartner2014 optimised","Predicted - baumgartner2014 modified",'Location','northwest')
 xlim([0 length(cond_dict)+1])
 ylim([0 55])
 xticks([1:length(cond_dict)])
-xticklabels([cond_dict])
+xticklabels([device_id])
 yticks([0:10:50])
 ylabel("Front polar error (??)")
 title("Front polar error in the median plane")
@@ -220,7 +243,7 @@ grid on;
 
 %%  EVALUATING FRONT AZIMUTH ERROR
 for i = 1:length(mySOFAfiles)
-    device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
+%    device_id(i) = convertCharsToStrings(mySOFAfiles(i).name);
     sofaFileName_target = mySOFAfiles(i).name;
 
     SOFAfile_target=fullfile(SOFAfolderName, sofaFileName_target);      
@@ -240,7 +263,7 @@ FrontAzError = (azEst(:,2:14)' - ObjFull_target.SourcePosition(hor_idx(2:14),1))
 predicted.frontAE(:) = sqrt(mean(FrontAzError.^2));
 
 figure;
-plot(lisTestResults.subjFrontAE,'-o','LineWidth',2,'MarkerSize',10); hold on;
+%plot(lisTestResults.subjFrontAE,'-o','LineWidth',2,'MarkerSize',10); hold on;
 plot(predicted.frontAE(:),'--d','LineWidth',2,'MarkerSize',10); hold on;
 
 
@@ -248,14 +271,14 @@ legend("Subjectivet test", "Predicted - may2011",'Location','northwest')
 xlim([0 7])
 ylim([0 15])
 xticks([1:6])
-xticklabels(cond_dict)
+xticklabels(device_id)
 title("Azimuth error in the frontal horizontal hemiplane")
 ylabel("Front azimuth error (??)")
 grid on;
 
-[raux,paux] = corrcoef(lisTestResults.subjFrontAE,predicted.frontAE(:));
-corr.r_ae = raux(1,2);
-corr.p_ae = paux(1,2);
+%[raux,paux] = corrcoef(lisTestResults.subjFrontAE,predicted.frontAE(:));
+%corr.r_ae = raux(1,2);
+%corr.p_ae = paux(1,2);
 
 %%
 
